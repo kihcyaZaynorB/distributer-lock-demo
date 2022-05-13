@@ -1,0 +1,17 @@
+server:
+  port: 8000
+
+
+datasource:
+  url: jdbc:mysql://127.0.0.1:3306/mall-dev?useSSL=false&useUnicode=true&characterEncoding=UTF8&serverTimeZone=GMT%2B8
+  driver-class-name: com.mysql.jdbc.Driver
+  username: root
+  password: 123456
+
+
+zookeeper:
+  address: localhost:2181
+
+spring:
+  application:
+    name: demo-service
