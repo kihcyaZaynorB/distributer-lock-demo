@@ -43,6 +43,11 @@ public class OrderServiceImpl implements OrderService {
     private ZkClient zkClient;
 
 
+    // @Transactional annotation is not allowed here
+    // since we should ensure that the scope of distribution lock
+    // wraps spring transaction. Otherwise, the data consistent
+    // would not be guaranteed. Moreover, we use a helper class
+    // which will open new transactions to wrap our business code.
     @Override
     public Order createOrder(CreateOrderRequest request) {
         Long userId = request.getUserId();
@@ -53,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
         final InterProcessMutex mutex = new InterProcessMutex(client, "/lock/warehouse");
         try {
             mutex.acquire();
+            // Open new transaction
             return transactionHelper.runInTx(() -> {
                 Sku sku = skuRepository.findById(skuId).orElseThrow(() -> new BusinessException("sku is not found"));
                 Stock stock = sku.getStock();
