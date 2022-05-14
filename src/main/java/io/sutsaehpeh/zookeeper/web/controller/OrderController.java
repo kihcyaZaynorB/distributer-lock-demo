@@ -19,6 +19,6 @@ public class OrderController {
 
     @PostMapping("/create")
     public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {
-        return ResponseEntity.ok(orderService.createOrder(request));
+        return ResponseEntity.ok(orderService.createOrderWithRedissonLock(request));
     }
 }

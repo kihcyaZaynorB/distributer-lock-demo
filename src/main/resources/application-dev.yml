@@ -15,3 +15,11 @@ zookeeper:
 spring:
   application:
     name: demo-service
+  redis:
+    database: 6
+    host: 127.0.0.1
+    port: 6379
+    password: null
+
+    redisson:
+      file: classpath:redisson.yml

@@ -29,6 +29,10 @@ dependencies {
 
     annotationProcessor("org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}")
 
+    implementation("org.springframework.boot:spring-boot-starter-data-redis:${springBootVersion}")
+
+    implementation("org.redisson:redisson:3.17.1")
+
     runtimeOnly("mysql:mysql-connector-java:5.1.49")
 
 }

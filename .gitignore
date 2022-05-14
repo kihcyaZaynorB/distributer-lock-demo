@@ -1,5 +1,7 @@
 .gradle
 .idea
 build
-./**/build
-./**/bin
+/**/build
+/**/bin
+/**/resources/application-prod.yml
+/**/resources/redisson-prod.yml

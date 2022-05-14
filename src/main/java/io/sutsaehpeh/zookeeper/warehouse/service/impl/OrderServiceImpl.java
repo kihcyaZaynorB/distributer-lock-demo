@@ -15,10 +15,13 @@ import io.sutsaehpeh.zookeeper.warehouse.service.OrderService;
 import io.sutsaehpeh.zookeeper.warehouse.service.WarehouseService;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -38,6 +41,9 @@ public class OrderServiceImpl implements OrderService {
     @Autowired
     private TransactionHelper transactionHelper;
 
+    @Autowired
+    private RedissonClient redissonClient;
+
 
     @Autowired
     private ZkClient zkClient;
@@ -49,7 +55,7 @@ public class OrderServiceImpl implements OrderService {
     // would not be guaranteed. Moreover, we use a helper class
     // which will open new transactions to wrap our business code.
     @Override
-    public Order createOrder(CreateOrderRequest request) {
+    public Order createOrderWithZookeeperLock(CreateOrderRequest request) {
         Long userId = request.getUserId();
         Long skuId = request.getSkuId();
         Integer quantity = request.getQuantity();
@@ -88,5 +94,43 @@ public class OrderServiceImpl implements OrderService {
             } catch (Exception ignored) {
             }
         }
+    }
+
+    @Override
+    public Order createOrderWithRedissonLock(CreateOrderRequest request) {
+        Long userId = request.getUserId();
+        Long skuId = request.getSkuId();
+        Integer quantity = request.getQuantity();
+        RLock lock = redissonClient.getLock("warehouse:order:create");
+        try {
+            // Open new transaction
+            lock.lock(10L, TimeUnit.SECONDS);
+            return transactionHelper.runInTx(() -> {
+                Sku sku = skuRepository.findById(skuId).orElseThrow(() -> new BusinessException("sku is not found"));
+                Stock stock = sku.getStock();
+                Integer stockVolume = stock.getStockVolume();
+                if (stockVolume < quantity) {
+                    throw new BusinessException("sku is sold out");
+                }
+                Order order = new Order();
+                order.setUserId(userId);
+                order.setCreateAt(new Date());
+                OrderDetail detail = new OrderDetail();
+                detail.setSkuId(skuId);
+                detail.setPrice(sku.getPrice());
+                detail.setQuantity(quantity);
+                order.setTotal(sku.getPrice() * quantity);
+                orderRepository.save(order);
+                detail.setOrderId(order.getOrderId());
+                orderDetailRepository.save(detail);
+                warehouseService.outOfWarehouse(stock.getStockId(), quantity);
+                return order;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            lock.unlock();
+        }
+
     }
 }

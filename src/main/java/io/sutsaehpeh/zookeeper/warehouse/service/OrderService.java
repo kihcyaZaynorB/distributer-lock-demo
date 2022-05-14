@@ -6,5 +6,7 @@ import io.sutsaehpeh.zookeeper.warehouse.request.CreateOrderRequest;
 public interface OrderService {
 
 
-    Order createOrder(CreateOrderRequest request);
+    Order createOrderWithZookeeperLock(CreateOrderRequest request);
+
+    Order createOrderWithRedissonLock(CreateOrderRequest request);
 }
